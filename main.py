@@ -3,11 +3,11 @@ from telebot.types import Message
 from config import bot
 from services.booking import MakeBooking
 from services.help import Help
-from services.set_user import SetUser
+from services.reset_email import ResetEmail
 from utils.classes import Context, HandlerArgs, User
 
 Context.add_service(Help)
-Context.add_service(SetUser)
+Context.add_service(ResetEmail)
 Context.add_service(MakeBooking)
 
 

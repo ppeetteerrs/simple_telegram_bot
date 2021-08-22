@@ -9,6 +9,16 @@ from utils.dataclass import DataClass, User
 
 
 @dataclass(frozen=True)
+class HandlerArgs:
+    """Message handler arguments."""
+
+    bot: TeleBot
+    user: Optional[User]
+    message: Message
+    command: Optional[str]
+
+
+@dataclass(frozen=True)
 class HandlerResult:
     """
     Message handler result.
@@ -20,16 +30,6 @@ class HandlerResult:
     next_step: str
     success: bool = True
     last: bool = False
-
-
-@dataclass(frozen=True)
-class HandlerArgs:
-    """Message handler arguments."""
-
-    bot: TeleBot
-    user: Optional[User]
-    message: Message
-    command: str
 
 
 Handler = Callable[[HandlerArgs], HandlerResult]
@@ -49,8 +49,8 @@ class Service:
     """
 
     commands: ClassVar[List[str]]
-    data: DataClass = None
-    next_step: Handler = None
+    data: Optional[DataClass] = None
+    next_step: Optional[Handler] = None
 
     def setup(self, args: HandlerArgs) -> HandlerResult:
         return HandlerResult(next_step=None, success=False, last=True)
@@ -122,8 +122,8 @@ class Context:
         # Run 1 step in the service and wait for next message
         result = current_service.next(args)
 
-        # Clear active service on last operation
-        if result.last:
+        # Clear active service on successful last operation
+        if result.success and result.last:
             cls.user_data.pop(id_)
 
         return result.success

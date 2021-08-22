@@ -1,4 +1,31 @@
-# Telegram Bookings Bot
+# Simple Telegram Bot
+
+## Setup
+
+### Anaconda Setup
+
+You will need to have Anaconda installed.
+
+```bash
+conda create -n simple_bot python=3.8 numpy pandas -y
+conda activate simple_bot
+pip install pyTelegramBotAPI
+pip install python-telegram-bot-calendar
+```
+
+### Telegram Setup
+
+Obtain an API key from Telegram @botfather, then add a file `config/secret.py` with the following lines:
+
+```python
+TELEGRAM_KEY = "<YOUR_TELEGRAM_KEY>"
+```
+
+### Start the Bot
+
+```bash
+python main.py
+```
 
 ## Services (Concept)
 

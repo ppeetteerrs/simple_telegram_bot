@@ -51,7 +51,7 @@ class User(DataClass):
 
     id_: int
     username: str
-    email: str = None
+    email: Optional[str] = None
 
     @property
     def key(self) -> int:
