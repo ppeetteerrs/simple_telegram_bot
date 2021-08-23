@@ -1,14 +1,12 @@
 from typing import Any, Optional
 
-from telebot.types import Animation
-
 from config.secret import DB_NAME, TELEGRAM_KEY
 from models.bot import Bot
 from models.message import Info
 from models.service import Service, StatelessStepResult, service_factory
 
 default_service = service_factory(
-    steps=lambda bot, info: StatelessStepResult(
+    setup=lambda bot, info: StatelessStepResult(
         message=bot.send(info.chat_id, "hi there")
     )
 )

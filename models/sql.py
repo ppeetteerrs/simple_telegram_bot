@@ -1,11 +1,9 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Optional, Type, TypeVar
 
 from sqlalchemy.orm.query import Query
-from sqlalchemy.sql.schema import Column
-from sqlalchemy.sql.sqltypes import Integer, String
 
-from models.settings import Settings, sql_map
+from models.settings import Settings
 
 _T = TypeVar("_T")
 

@@ -2,7 +2,10 @@ import re
 from dataclasses import dataclass, field
 from typing import Optional
 
-from models.sql import SQLMixin, sql_map
+from models.bot import Bot
+from models.message import Info
+from models.settings import sql_map
+from models.sql import SQLMixin
 from sqlalchemy import Column, Integer, String
 
 
@@ -17,6 +20,8 @@ class User(SQLMixin):
         default=None, metadata={"sa": Column(String(150))}
     )
 
+def setup(bot: Bot, info: Info, data: User):
+    
 
 class ResetEmail(Service):
     commands = ["start", "reset_email"]

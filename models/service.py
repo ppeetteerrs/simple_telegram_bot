@@ -2,19 +2,7 @@ from __future__ import annotations
 
 from abc import abstractclassmethod
 from dataclasses import dataclass, field
-from functools import wraps
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Final,
-    Generic,
-    Optional,
-    Protocol,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Callable, Dict, Generic, Optional, Protocol, TypeVar
 
 from telebot.types import Message
 
@@ -67,44 +55,6 @@ class StepResult(Generic[_T]):
 
 StatelessStepResult = StepResult[None]
 
-"""
-Step types
-
-Union[Dict[X, Y], Dict[X, Z]] works but Dict[X, Union[Y,Z]]
-doesn't because Dict are mutable and should only contain one value type
-"""
-StatelessStep = Callable[[Bot, Info], StepResult[_T]]
-StatefulStep = Callable[[Bot, Info, _T], StepResult[_T]]
-
-StepsArg = Union[
-    Dict[str, StatelessStep[_T]],
-    Dict[str, StatefulStep[_T]],
-]
-
-Steps = Dict[str, StatefulStep[_T]]
-
-"""
-Dirty trick to make sure all steps can be treated as StatefulStep
-"""
-
-
-def wrap_step(f: Union[StatelessStep[_T], StatefulStep[_T]]):
-    @wraps(f)
-    def wrapper(*args: Any):
-        n_args = f.__code__.co_argcount
-        return f(*args[:n_args])
-
-    stateful_wrapper = cast(StatefulStep[_T], wrapper)
-    return stateful_wrapper
-
-
-def default_handle(bot: Bot, info: Info):
-    msg = bot.send(info.chat_id, "noway")
-
-    return StatelessStepResult(
-        message=msg, should_expire=False, next_step="setup", last_step=True
-    )
-
 
 @dataclass
 class Service(Generic[_T]):
@@ -112,37 +62,54 @@ class Service(Generic[_T]):
     A bot service
 
     :ivar data: current service data
-    :ivar steps: dictionary of steps in the service (starts from "setup")
+    :ivar setup: first step after service is created
+    :ivar steps: chain of intermediate steps
+    :ivar cleanup: called before service gets destroyed
     :ivar current_step: current step
     """
 
     data: _T
-    steps: Final[Steps[_T]] = field(init=True, default_factory=dict)
-    current_step: str = field(init=False, default="setup")
+    setup: Callable[[Bot, Info], StepResult[_T]]
+    steps: Dict[str, Callable[[Bot, Info, _T], StepResult[_T]]] = field(
+        default_factory=dict
+    )
+    cleanup: Optional[Callable[[Service[_T]], None]] = None
+    current_step: Optional[str] = field(init=False, default=None)
 
     def handle(self, info: Info) -> StepResult[_T]:
         # Get current step
-        step = self.steps.get(self.current_step)
-
-        # Execute current step
-        if step is None:
-            result = StepResult[_T](next_step=self.current_step, last_step=True)
+        if self.current_step is None:
+            step = self.setup
+            result = step(Bot(), info)
         else:
-            result = step(Bot(), info, self.data)
+            step = self.steps.get(self.current_step)
+
+            if step is None:
+                result = StepResult[_T](
+                    next_step=self.current_step, last_step=True
+                )
+            else:
+                result = step(Bot(), info, self.data)
 
         # Update data
         if result.data is not None:
             self.data = result.data
 
         # Move current step to next step
-        if result.next_step is not None:
+        if result.next_step is not None and not result.last_step:
             self.current_step = result.next_step
+
+        # Clean service if needed
+        if result.last_step and self.cleanup:
+            self.cleanup(self)
 
         return result
 
 
 def service_factory(
-    steps: Union[StatelessStep[_T], StepsArg[_T]],
+    setup: Callable[[Bot, Info], StepResult[_T]],
+    steps: Dict[str, Callable[[Bot, Info, _T], StepResult[_T]]] = {},
+    cleanup: Optional[Callable[[Service[_T]], None]] = None,
     data_factory: Factory[_T] = lambda: None,
 ) -> Factory[Service[_T]]:
     """
@@ -151,14 +118,10 @@ def service_factory(
     :param steps: service steps
     :param data_factory: factory method / class for service data
     """
-    if isinstance(steps, dict):
-        if "setup" not in steps:
-            raise AssertionError("setup step is missing.")
-        parsed_steps = {name: wrap_step(step) for name, step in steps.items()}
-    else:
-        parsed_steps = {"setup": wrap_step(steps)}
 
     def factory():
-        return Service[_T](data=data_factory(), steps=parsed_steps)
+        return Service[_T](
+            setup=setup, steps=steps, cleanup=cleanup, data=data_factory()
+        )
 
     return factory
