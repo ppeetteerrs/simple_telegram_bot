@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Optional
+from datetime import datetime
+from typing import ClassVar, Optional
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine.base import Engine
@@ -12,13 +12,14 @@ from telebot import TeleBot
 mapper_registry = registry()
 sql_map = mapper_registry.mapped
 
-@dataclass
+
 class Settings:
-    _token: Optional[str] = None
-    _db_name: Optional[str] = None
-    _bot: Optional[TeleBot] = None
-    _engine: Optional[Engine] = None
-    _session: Optional[Session] = None
+    _token: ClassVar[Optional[str]] = None
+    _db_name: ClassVar[Optional[str]] = None
+    _bot: ClassVar[Optional[TeleBot]] = None
+    _engine: ClassVar[Optional[Engine]] = None
+    _session: ClassVar[Optional[Session]] = None
+    start_time: ClassVar[datetime] = datetime.now()
 
     @classmethod
     def start(cls, token: str, db_name: str) -> None:
@@ -29,7 +30,6 @@ class Settings:
         cls._engine = engine
         cls._session = sessionmaker(engine)()
         mapper_registry.metadata.create_all(engine)
-
 
     @classmethod
     @property
@@ -70,6 +70,3 @@ class Settings:
             return cls._session
         else:
             raise ValueError("Session is not set.")
-    
-
-

@@ -1,7 +1,21 @@
 import re
+from dataclasses import dataclass, field
 from typing import Optional
 
-from utils.classes import HandlerArgs, HandlerResult, Service, User
+from models.sql import SQLMixin, sql_map
+from sqlalchemy import Column, Integer, String
+
+
+@sql_map
+@dataclass
+class User(SQLMixin):
+    id: int = field(
+        init=False, metadata={"sa": Column(Integer, primary_key=True)}
+    )
+    username: str = field(metadata={"sa": Column(String(150))})
+    email: Optional[str] = field(
+        default=None, metadata={"sa": Column(String(150))}
+    )
 
 
 class ResetEmail(Service):

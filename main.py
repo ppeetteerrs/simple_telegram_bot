@@ -1,35 +1,54 @@
-from telebot.types import Message
+from typing import Any, Optional
 
-from config import bot
-from services.booking import MakeBooking
-from services.help import Help
-from services.reset_email import ResetEmail
-from utils.classes import Context, HandlerArgs, User
+from telebot.types import Animation
 
-Context.add_service(Help)
-Context.add_service(ResetEmail)
-Context.add_service(MakeBooking)
+from config.secret import DB_NAME, TELEGRAM_KEY
+from models.bot import Bot
+from models.message import Info
+from models.service import Service, StatelessStepResult, service_factory
 
-
-@bot.message_handler(commands=list(Context.service_classes.keys()))
-def handle_command(message: Message):
-
-    id_: int = message.from_user.id
-
-    user = User.load(id_)
-    command: str = "start" if user is None else message.text[1:]
-    args = HandlerArgs(bot=bot, user=user, message=message, command=command)
-    Context.handle(args)
+default_service = service_factory(
+    steps=lambda bot, info: StatelessStepResult(
+        message=bot.send(info.chat_id, "hi there")
+    )
+)
 
 
-@bot.message_handler(content_types=["text"])
-def handle_message(message: Message):
-
-    id_: int = message.from_user.id
-
-    user = User.load(id_)
-    args = HandlerArgs(bot=bot, user=user, message=message, command=None)
-    Context.handle(args)
+def dispatcher(info: Info, service: Optional[Service[Any]]):
+    return None
 
 
-bot.polling()
+Bot.start(TELEGRAM_KEY, DB_NAME, dispatcher=dispatcher)
+
+
+# Settings.start(TELEGRAM_KEY, DB_NAME)
+
+
+# @Settings.bot.message_handler(regexp=".*")
+# def handle_command(message: Message):
+
+#     Settings.bot.send_message(message.chat.id, "hi")
+
+
+# Settings.bot.polling()
+
+
+# @bot.message_handler(commands=list(Context.service_classes.keys()))
+# def handle_command(message: Message):
+
+#     id_: int = message.from_user.id
+
+#     user = User.load(id_)
+#     command: str = "start" if user is None else message.text[1:]
+#     args = HandlerArgs(bot=bot, user=user, message=message, command=command)
+#     Context.handle(args)
+
+
+# @bot.message_handler(content_types=["text"])
+# def handle_message(message: Message):
+
+#     id_: int = message.from_user.id
+
+#     user = User.load(id_)
+#     args = HandlerArgs(bot=bot, user=user, message=message, command=None)
+#     Context.handle(args)
