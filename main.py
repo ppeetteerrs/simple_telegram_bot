@@ -3,17 +3,24 @@ from typing import Any, Optional
 from config.secret import DB_NAME, TELEGRAM_KEY
 from models.bot import Bot
 from models.message import Info
-from models.service import Service, StatelessStepResult, service_factory
-
-default_service = service_factory(
-    setup=lambda bot, info: StatelessStepResult(
-        message=bot.send(info.chat_id, "hi there")
-    )
-)
+from models.service import Service
+from services.booking import booking_service
+from services.reset_email import User, email_service
 
 
 def dispatcher(info: Info, service: Optional[Service[Any]]):
-    return None
+    user_record = User.find(info.user_id)
+
+    if user_record is None:
+        if service is not None and service.name == "email":
+            return service
+        else:
+            return email_service()
+    else:
+        if info.data is not None and info.data.startswith("/") and info.query is None:
+            return booking_service()
+        else:
+            return service
 
 
 Bot.start(TELEGRAM_KEY, DB_NAME, dispatcher=dispatcher)
